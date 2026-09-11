@@ -100,7 +100,7 @@ async function main() {
         "Our free Discord community: market discussion, free setups, and the first place we post announcements.",
       image: "/products/discord.svg",
       type: ProductType.FREE,
-      deliveryContent: "Your invite: https://discord.gg/forexempire",
+      deliveryContent: "Your invite: https://discord.gg/kWxfWuUCZr",
       plans: {
         create: [
           {
