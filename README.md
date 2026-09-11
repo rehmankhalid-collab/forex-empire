@@ -14,7 +14,7 @@ after purchase, and a built-in affiliate program with commission tracking.
 ## Stack
 
 - Next.js (App Router) + TypeScript + Tailwind CSS
-- Prisma 7 + SQLite locally (swap the datasource for Postgres in production)
+- Prisma 7 + Postgres (e.g. [Neon](https://neon.tech))
 - Auth.js (NextAuth v5) with email/password credentials
 - Stripe Checkout for payments + webhooks for fulfillment
 
@@ -22,7 +22,7 @@ after purchase, and a built-in affiliate program with commission tracking.
 
 ```bash
 npm install
-cp .env.example .env   # fill in AUTH_SECRET at minimum
+cp .env.example .env   # fill in DATABASE_URL and AUTH_SECRET
 npx prisma migrate deploy
 npx prisma db seed
 npm run dev
@@ -39,7 +39,7 @@ Seeded accounts:
 
 | Variable | Required | Notes |
 | --- | --- | --- |
-| `DATABASE_URL` | yes | `file:./dev.db` for local SQLite |
+| `DATABASE_URL` | yes | Postgres connection string (Neon, Supabase, etc.) |
 | `AUTH_SECRET` | yes | `openssl rand -base64 32` |
 | `STRIPE_SECRET_KEY` | for paid checkout | Stripe **test** secret key |
 | `STRIPE_WEBHOOK_SECRET` | for paid checkout | from `stripe listen` (below) |
@@ -86,6 +86,6 @@ Use Stripe's test card `4242 4242 4242 4242`, any future expiry, any CVC.
   with your real Discord invite, Telegram channel, and indicator delivery
   instructions via Prisma Studio (`npx prisma studio`) or by editing
   `prisma/seed.ts` and re-seeding.
-- For production, point `DATABASE_URL` at Postgres and swap the
-  `@prisma/adapter-better-sqlite3` driver adapter in `src/lib/prisma.ts` for
-  `@prisma/adapter-pg`.
+- Deployed on Vercel: since serverless functions don't have a persistent
+  filesystem, `DATABASE_URL` must point at a real Postgres instance (not a
+  local file) — set it in the Vercel project's Environment Variables.
