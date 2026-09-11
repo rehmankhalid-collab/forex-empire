@@ -29,15 +29,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  if (event.type === "checkout.session.completed") {
-    const checkoutSession = event.data.object as Stripe.Checkout.Session;
-    await recordPurchase(checkoutSession);
+  switch (event.type) {
+    case "checkout.session.completed": {
+      const checkoutSession = event.data.object as Stripe.Checkout.Session;
+      await recordPurchase(stripe, checkoutSession);
+      break;
+    }
+    case "customer.subscription.updated": {
+      const subscription = event.data.object as Stripe.Subscription;
+      await syncSubscriptionPeriod(subscription);
+      break;
+    }
+    case "customer.subscription.deleted": {
+      const subscription = event.data.object as Stripe.Subscription;
+      await cancelSubscriptionPurchase(subscription);
+      break;
+    }
   }
 
   return NextResponse.json({ received: true });
 }
 
-async function recordPurchase(checkoutSession: Stripe.Checkout.Session) {
+function subscriptionPeriodEnd(subscription: Stripe.Subscription) {
+  const periodEndSeconds = subscription.items.data[0]?.current_period_end;
+  return periodEndSeconds ? new Date(periodEndSeconds * 1000) : null;
+}
+
+async function recordPurchase(
+  stripe: Stripe,
+  checkoutSession: Stripe.Checkout.Session
+) {
   const { userId, productId, planId, referredById } =
     checkoutSession.metadata ?? {};
 
@@ -54,6 +75,12 @@ async function recordPurchase(checkoutSession: Stripe.Checkout.Session) {
       ? checkoutSession.subscription
       : (checkoutSession.subscription?.id ?? null);
 
+  let currentPeriodEnd: Date | null = null;
+  if (subscriptionId) {
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    currentPeriodEnd = subscriptionPeriodEnd(subscription);
+  }
+
   const purchase = await prisma.purchase.create({
     data: {
       userId,
@@ -62,6 +89,7 @@ async function recordPurchase(checkoutSession: Stripe.Checkout.Session) {
       amountPaidCents,
       stripeCheckoutSessionId: checkoutSession.id,
       stripeSubscriptionId: subscriptionId,
+      currentPeriodEnd,
       referredById: referredById ?? null,
     },
   });
@@ -80,4 +108,34 @@ async function recordPurchase(checkoutSession: Stripe.Checkout.Session) {
       });
     }
   }
+}
+
+async function syncSubscriptionPeriod(subscription: Stripe.Subscription) {
+  const purchase = await prisma.purchase.findFirst({
+    where: { stripeSubscriptionId: subscription.id },
+  });
+  if (!purchase) return;
+
+  const currentPeriodEnd = subscriptionPeriodEnd(subscription);
+  const isLive = subscription.status === "active" || subscription.status === "trialing";
+
+  await prisma.purchase.update({
+    where: { id: purchase.id },
+    data: {
+      currentPeriodEnd,
+      status: isLive ? "ACTIVE" : "EXPIRED",
+    },
+  });
+}
+
+async function cancelSubscriptionPurchase(subscription: Stripe.Subscription) {
+  const purchase = await prisma.purchase.findFirst({
+    where: { stripeSubscriptionId: subscription.id },
+  });
+  if (!purchase) return;
+
+  await prisma.purchase.update({
+    where: { id: purchase.id },
+    data: { status: "CANCELED" },
+  });
 }
