@@ -1,11 +1,9 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaClient, PlanInterval, ProductType } from "../src/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-const adapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL ?? "file:./dev.db",
-});
+const adapter = new PrismaPg(process.env.DATABASE_URL!);
 const prisma = new PrismaClient({ adapter });
 
 const WEEKS_PER_MONTH = 52 / 12;
