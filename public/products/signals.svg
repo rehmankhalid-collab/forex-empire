@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#151517"/>
+      <stop offset="100%" stop-color="#050506"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#g1)"/>
+  <polyline points="20,260 100,220 160,240 220,160 280,190 340,120 400,150 460,90 520,110 600,60" fill="none" stroke="#e8b23d" stroke-width="4"/>
+  <g fill="#22c55e" opacity="0.85">
+    <rect x="90" y="200" width="12" height="30"/>
+    <rect x="210" y="140" width="12" height="30"/>
+    <rect x="330" y="100" width="12" height="30"/>
+    <rect x="450" y="70" width="12" height="30"/>
+  </g>
+  <g fill="#ef4444" opacity="0.85">
+    <rect x="150" y="220" width="12" height="30"/>
+    <rect x="270" y="170" width="12" height="30"/>
+    <rect x="390" y="130" width="12" height="30"/>
+    <rect x="510" y="95" width="12" height="30"/>
+  </g>
+  <text x="32" y="48" font-family="Georgia, serif" font-size="28" fill="#e8b23d">Forex &amp; XAUUSD Signals</text>
+</svg>

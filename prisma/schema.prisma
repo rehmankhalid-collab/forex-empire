@@ -1,0 +1,137 @@
+// Prisma schema for the Forex Empire storefront.
+// SQLite for local dev; point DATABASE_URL at Postgres in production.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+enum ProductType {
+  SUBSCRIPTION
+  ONE_TIME
+  FREE
+}
+
+enum PlanInterval {
+  WEEK
+  MONTH
+  YEAR
+  ONE_TIME
+  FREE
+}
+
+enum PurchaseStatus {
+  ACTIVE
+  CANCELED
+  EXPIRED
+}
+
+enum CommissionStatus {
+  PENDING
+  PAID
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  passwordHash  String
+  role          Role      @default(CUSTOMER)
+  createdAt     DateTime  @default(now())
+
+  stripeCustomerId String?
+
+  purchases        Purchase[]
+  affiliateLink    AffiliateLink?
+  referredPurchases Purchase[] @relation("ReferredPurchases")
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  name        String
+  tagline     String
+  description String
+  image       String
+  type        ProductType
+  // Content only revealed to buyers (Discord invite, download link, signal channel info, etc).
+  deliveryContent String
+  createdAt   DateTime    @default(now())
+
+  plans     Plan[]
+  purchases Purchase[]
+}
+
+model Plan {
+  id                String       @id @default(cuid())
+  productId         String
+  product           Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name              String
+  interval          PlanInterval
+  priceCents        Int
+  compareAtCents    Int?
+  isDefault         Boolean      @default(false)
+  stripePriceId     String?
+
+  purchases Purchase[]
+
+  @@index([productId])
+}
+
+model Purchase {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id])
+  productId String
+  product   Product        @relation(fields: [productId], references: [id])
+  planId    String
+  plan      Plan           @relation(fields: [planId], references: [id])
+  status    PurchaseStatus @default(ACTIVE)
+
+  stripeCheckoutSessionId String?
+  stripeSubscriptionId    String?
+  amountPaidCents         Int
+
+  referredById String?
+  referredBy   User?   @relation("ReferredPurchases", fields: [referredById], references: [id])
+
+  currentPeriodEnd DateTime?
+  createdAt        DateTime  @default(now())
+
+  commission Commission?
+
+  @@index([userId])
+  @@index([productId])
+}
+
+model AffiliateLink {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  ownerId   String   @unique
+  owner     User     @relation(fields: [ownerId], references: [id])
+  createdAt DateTime @default(now())
+
+  commissions Commission[]
+}
+
+model Commission {
+  id              String            @id @default(cuid())
+  affiliateLinkId String
+  affiliateLink   AffiliateLink     @relation(fields: [affiliateLinkId], references: [id])
+  purchaseId      String            @unique
+  purchase        Purchase          @relation(fields: [purchaseId], references: [id])
+  amountCents     Int
+  status          CommissionStatus  @default(PENDING)
+  createdAt       DateTime          @default(now())
+
+  @@index([affiliateLinkId])
+}
